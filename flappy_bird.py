@@ -10,7 +10,6 @@ WIDTH, HEIGHT = 400, 600
 FPS = 60
 GRAVITY = 0.25
 BIRD_JUMP = -5
-PIPE_SPEED = 3
 PIPE_GAP = 150
 PIPE_FREQUENCY = 1500  # мс
 
@@ -43,11 +42,9 @@ class Bird:
         self.velocity = BIRD_JUMP
 
     def update(self):
-        # Применяем гравитацию
         self.velocity += GRAVITY
         self.y += self.velocity
 
-        # Проверяем выход за границы экрана
         if self.y < 0:
             self.y = 0
             self.velocity = 0
@@ -57,9 +54,7 @@ class Bird:
 
     def draw(self):
         pygame.draw.circle(screen, (255, 255, 0), (self.x, int(self.y)), self.radius)
-        # Глаз
         pygame.draw.circle(screen, BLACK, (self.x + 5, int(self.y) - 5), 3)
-        # Клюв
         pygame.draw.polygon(screen, (255, 165, 0), [
             (self.x + self.radius, int(self.y)),
             (self.x + self.radius + 10, int(self.y)),
@@ -72,15 +67,16 @@ class Bird:
 
 
 class Pipe:
-    def __init__(self):
+    def __init__(self, speed):
         self.x = WIDTH
+        self.speed = speed
         self.height = random.randint(100, HEIGHT - 100 - PIPE_GAP)
         self.top_pipe = pygame.Rect(self.x, 0, 50, self.height)
         self.bottom_pipe = pygame.Rect(self.x, self.height + PIPE_GAP, 50, HEIGHT - self.height - PIPE_GAP)
         self.passed = False
 
     def update(self):
-        self.x -= PIPE_SPEED
+        self.x -= self.speed
         self.top_pipe.x = self.x
         self.bottom_pipe.x = self.x
 
@@ -129,6 +125,8 @@ def main():
     pipes = []
     score = 0
     last_pipe = pygame.time.get_ticks()
+    pipe_speed = 3  # Начальная скорость труб
+    last_speed_increase = 0  # Последнее увеличение скорости
 
     # Состояния игры
     game_active = False
@@ -151,6 +149,8 @@ def main():
                         bird = Bird()
                         pipes = []
                         score = 0
+                        pipe_speed = 3
+                        last_speed_increase = 0
                         last_pipe = pygame.time.get_ticks()
                     else:
                         bird.jump()
@@ -168,11 +168,11 @@ def main():
             # Генерация труб
             time_now = pygame.time.get_ticks()
             if time_now - last_pipe > PIPE_FREQUENCY:
-                pipes.append(Pipe())
+                pipes.append(Pipe(pipe_speed))
                 last_pipe = time_now
 
             # Обновление труб
-            for pipe in pipes:
+            for pipe in pipes[:]:
                 pipe.update()
 
                 # Проверка столкновений
@@ -187,6 +187,11 @@ def main():
                 # Удаление труб за экраном
                 if pipe.x < -50:
                     pipes.remove(pipe)
+
+            # Увеличение скорости каждые 5 очков
+            if score - last_speed_increase >= 5:
+                pipe_speed += 1
+                last_speed_increase = score
 
             # Проверка выхода за границы
             if bird.y >= HEIGHT or bird.y <= 0:
